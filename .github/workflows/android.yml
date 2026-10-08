@@ -1,26 +1,71 @@
-name: Android CI
+name: Build Saphatech Pro Bot
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
+  workflow_dispatch:
 
 jobs:
-  build:
-
+  android:
+    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/setup-java@v4
-    - name: set up Java
-      uses: actions/setup-java@v5
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: gradle
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-    - name: Build with Gradle
-      run: ./gradlew build
+      - name: Setup Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" \
+                     "platforms;android-35" \
+                     "build-tools;35.0.0"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Build APK
+        run: gradle assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Saphatech-Pro-Bot-APK
+          path: app/build/outputs/apk/debug/*.apk
+
+  pc-bot:
+    name: Package PC MT5 Bot
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Package PC Bot
+        run: |
+          mkdir -p release/PC-Bot
+          cp -r . release/PC-Bot/ 2>/dev/null || true
+          rm -rf release/PC-Bot/.git
+          rm -rf release/PC-Bot/.github
+
+      - name: Create PC Bot ZIP
+        run: |
+          cd release
+          zip -r Saphatech-Pro-Bot-PC-MT5.zip PC-Bot
+
+      - name: Upload PC Bot
+        uses: actions/upload-artifact@v4
+        with:
+          name: Saphatech-Pro-Bot-PC-MT5
+          path: release/Saphatech-Pro-Bot-PC-MT5.zip
